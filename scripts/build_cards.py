@@ -270,7 +270,7 @@ def paste_symbol(main_image, other_image_path, size=2, location=(0, 0)):
 
 
 def get_icon(name):
-    icons = glob.glob(os.path.join(this_dir, 'resource', 'pokemon', '*' + name.lower() + '*' + '.png'))
+    icons = glob.glob(os.path.join(this_dir, 'resource', 'pokemon_art', '*' + name.lower() + '*' + '.png'))
     if icons:
         return icons[0]
 
@@ -449,11 +449,14 @@ class Card(object):
         self.add_background()
         self.add_frame()
         self.add_art()  # Do art before the evolution box
-        self.add_symbol()
         self.add_title()
         self.add_level()
         self.add_hp()
         self.add_evolution_box()
+        self.add_put_on()
+
+        self.add_symbol()  # Symbol goes after the evolution box so it overlaps the lines 
+
         self.add_species_banner()
         self.add_moves()
         self.add_weakness()
@@ -535,18 +538,22 @@ class Card(object):
             open_resize_paste(self.new_image, 'resource/base_card_parts/basic.png')
             self.draw.text(FONT_BASIC_LOCATION, 'BASIC', fill=COLOR_BLACK, font=FONT_BASIC)
 
+        elif self.stage == 2:
+            open_resize_paste(self.new_image, 'resource/base_card_parts/stage_line.png')
+            open_resize_paste(self.new_image, 'resource/base_card_parts/stage_box.png')
+            self.draw.rectangle((58, 64, 151, 141), fill=COLOR_GREY)
+            self.draw.text((67, 40), 'STAGE1', COLOR_BLACK, font=FONT_BASIC)
+
+            open_resize_paste(self.new_image, get_icon(self.prev_evolution_name), resize=(151 - 58 - 6, 141 - 64 - 6), keep_resize_ratio=True, location=(103, 103), center=True)
+
         elif self.stage == 2 or self.stage == 3:
             open_resize_paste(self.new_image, 'resource/base_card_parts/stage_line.png')
-            if self.stage == 3:
-                open_resize_paste(self.new_image, 'resource/base_card_parts/stage_line.png', location=(0, 6))  # Draw an extra line 
+            open_resize_paste(self.new_image, 'resource/base_card_parts/stage_line.png', location=(0, 6))  # Draw an extra line 
                 
             open_resize_paste(self.new_image, 'resource/base_card_parts/stage_box.png')
             self.draw.rectangle((58, 64, 151, 141), fill=COLOR_GREY)
 
-            if self.stage == 3:
-                self.draw.text((64, 40), 'STAGE 2', COLOR_BLACK, font=FONT_BASIC)
-            else:
-                self.draw.text((67, 40), 'STAGE1', COLOR_BLACK, font=FONT_BASIC)
+            self.draw.text((64, 40), 'STAGE 2', COLOR_BLACK, font=FONT_BASIC)
 
             open_resize_paste(self.new_image, get_icon(self.prev_evolution_name), resize=(151 - 58 - 6, 141 - 64 - 6), keep_resize_ratio=True, location=(103, 103), center=True)
 
@@ -731,7 +738,6 @@ class Card(object):
 
 
     def add_weakness(self):
-        
         self.draw.text(FONT_WEAKNESS_LOCATION, "weakness", self.text_color, font=FONT_WEAKNESS) 
         weakness = get_weakness(self.type1, self.type2)
         if weakness:
@@ -748,7 +754,6 @@ class Card(object):
             self.draw.text((361, 885), text='20', fill=self.text_color, font=FONT_WEAKNESS_NUMBER)
 
     def add_retreat(self):
-            
         self.draw.text(FONT_RETREAT_LOCATION, "retreat", self.text_color, font=FONT_WEAKNESS) 
         self.draw.text((93, 941), "cost", self.text_color, font=FONT_WEAKNESS) 
         if str(self.retreat) != 'nan':
@@ -809,6 +814,5 @@ def main():
             raise
 
 
-# logger.setLevel(logging.DEBUG)
 if __name__ == '__main__':
     main()
