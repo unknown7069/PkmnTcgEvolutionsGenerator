@@ -448,7 +448,9 @@ class Card(object):
         self.create_blank()
         self.add_background()
         self.add_frame()
+        
         self.add_art()  # Do art before the evolution box
+        
         self.add_title()
         self.add_level()
         self.add_hp()
