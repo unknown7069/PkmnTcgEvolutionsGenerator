@@ -54,11 +54,10 @@ def get_stage(evolution_chain, target_name):
 
 
 async def collect_more_data():
-    # Create a CSV file with the following columns:
-    # id, name, type1, type2, weight, height
+    # Create a CSV file
     async with aiopoke.AiopokeClient() as client:
         rows = []
-        for i in range(1, 251+1):
+        for i in range(1, 1000+1):
             print("Collecting '%d'..." % i)
             # Base information 
             pkm = await client.get_pokemon(i)
@@ -70,13 +69,24 @@ async def collect_more_data():
             weight = "{:.1f}".format(pkm.weight * (199.5/905))
 
             def get_flavor_text():
+                best_match = None
                 for entry in pkm_spec.flavor_text_entries:
                     if entry.language.name == 'en' and entry.version.name == 'firered':
-                        ft = entry.flavor_text.replace('\n', ' ')
-                        ft = ft.replace('\u000c', ' ')
-                        ft = ft.replace('\x0c', '')
-                        return "\"\"\"" + ft + "\"\"\""
-                return ""
+                        best_match = entry.flavor_text
+                        break 
+                # Default to any English text if no Firered entry is found
+                if not best_match:
+                    for entry in pkm_spec.flavor_text_entries:
+                        if entry.language.name == 'en':
+                            best_match = entry.flavor_text
+                            break
+
+                ft = best_match.replace('\n', ' ')
+                ft = ft.replace('\u000c', ' ')
+                ft = ft.replace('\x0c', '')
+                ft = ft.replace('\u2212', '')
+                return "\"\"\"" + ft + "\"\"\""
+            
             flavor_text = get_flavor_text()
 
             def get_genus():
