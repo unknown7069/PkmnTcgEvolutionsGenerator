@@ -7,9 +7,17 @@ import time
 import itertools
 from collections import namedtuple
 import logging 
-# Set up a basic logger, filter out to only this logger and set it to debug 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 logger = logging.getLogger(__name__)
+# Set the logger to debug level
+logger.setLevel(logging.DEBUG)
+# Set the logger format
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+# Create a console handler and set the formatter
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(formatter)
+# Add the console handler to the logger
+logger.addHandler(console_handler)
 
 
 this_dir = os.path.dirname(os.path.dirname(__file__))
@@ -96,13 +104,32 @@ FONT_INFO_BAR = ImageFont.truetype(_FONT_GILL + "Gill Sans Bold Italic.otf", 25)
 
 FONT_MOVE_TITLE = ImageFont.truetype(_FONT_GILL + "GillSans Condensed Bold.otf", 40)
 FONT_MOVE_DESCRIPTION_LARGE = ImageFont.truetype(_FONT_GILL + "Gill Sans Medium.otf", 30)
-FONT_MOVE_DESCRIPTION_MEDIUM = ImageFont.truetype(_FONT_GILL + "Gill Sans Medium.otf", 24)
+FONT_MOVE_DESCRIPTION_MEDIUM = ImageFont.truetype(_FONT_GILL + "Gill Sans Medium.otf", 26)
 FONT_MOVE_DESCRIPTION_SMALL = ImageFont.truetype(_FONT_GILL + "Gill Sans Medium.otf", 20)
 FONT_MOVE_SIZES = (FONT_MOVE_DESCRIPTION_LARGE, FONT_MOVE_DESCRIPTION_MEDIUM, FONT_MOVE_DESCRIPTION_SMALL)
 FONT_MOVE_REAL_HEIGHT = (FONT_MOVE_DESCRIPTION_LARGE.getbbox('X')[3] - FONT_MOVE_DESCRIPTION_LARGE.getbbox('X')[1],
                        FONT_MOVE_DESCRIPTION_MEDIUM.getbbox('X')[3] - FONT_MOVE_DESCRIPTION_MEDIUM.getbbox('X')[1],
                        FONT_MOVE_DESCRIPTION_SMALL.getbbox('X')[3] - FONT_MOVE_DESCRIPTION_SMALL.getbbox('X')[1])
 FONT_MOVE_DAMAGE = ImageFont.truetype(_FONT_GILL + "Gill Sans Medium.otf", 50)
+MOVE_TITLE_DESC_GAP = (24, 12, 8)  # The gap from title to line 
+MOVE_TEXT_SPACING = (12, 10, 8)  # The gap between each line in the description 
+MOVE_SPLITTER_GAP = (30, 24, 14, 10)  # The gap around the splitter 
+
+# Make a list of sizes to try and in what order when drawing the moves
+MOVE_COMBINATIONS = [
+    (FONT_MOVE_SIZES[0], MOVE_TITLE_DESC_GAP[0], MOVE_TEXT_SPACING[0], MOVE_SPLITTER_GAP[0]),
+    (FONT_MOVE_SIZES[0], MOVE_TITLE_DESC_GAP[1], MOVE_TEXT_SPACING[0], MOVE_SPLITTER_GAP[0]),
+    (FONT_MOVE_SIZES[0], MOVE_TITLE_DESC_GAP[1], MOVE_TEXT_SPACING[0], MOVE_SPLITTER_GAP[1]),
+    (FONT_MOVE_SIZES[0], MOVE_TITLE_DESC_GAP[1], MOVE_TEXT_SPACING[1], MOVE_SPLITTER_GAP[1]),
+    (FONT_MOVE_SIZES[0], MOVE_TITLE_DESC_GAP[2], MOVE_TEXT_SPACING[2], MOVE_SPLITTER_GAP[1]),
+    
+    (FONT_MOVE_SIZES[1], MOVE_TITLE_DESC_GAP[1], MOVE_TEXT_SPACING[1], MOVE_SPLITTER_GAP[1]),
+    (FONT_MOVE_SIZES[1], MOVE_TITLE_DESC_GAP[2], MOVE_TEXT_SPACING[2], MOVE_SPLITTER_GAP[1]),
+    (FONT_MOVE_SIZES[1], MOVE_TITLE_DESC_GAP[2], MOVE_TEXT_SPACING[2], MOVE_SPLITTER_GAP[2]),
+
+    (FONT_MOVE_SIZES[2], MOVE_TITLE_DESC_GAP[2], MOVE_TEXT_SPACING[2], MOVE_SPLITTER_GAP[2]),
+    (FONT_MOVE_SIZES[2], MOVE_TITLE_DESC_GAP[2], MOVE_TEXT_SPACING[2], MOVE_SPLITTER_GAP[3]),
+]
 
 move_details = namedtuple('move_details', ['font', 'initial_gap', 'text_space', 'text_height', 'char_width'])
 
@@ -133,106 +160,59 @@ FONT_SET_NUMBER_LOCATION = (647, 977)
 
 
 def get_weakness(type_1, type_2=None):
+    type_weakness_map = {
+        'normal': 'fighting',
+        'fighting': 'psychic',
+        'flying': 'electric',
+        'grass': 'fire',
+        'bug': 'fire',
+        'water': 'grass',
+        'ice': 'steel',
+        'fire': 'water',
+        'rock': 'grass',
+        'ground': 'grass',
+        'psychic': 'dark',
+        'ghost': 'dark',
+        'fairy': 'dark',
+        'electric': 'fighting',
+        'dark': 'fighting',
+        'poison': 'fighting',
+        'steel': 'fire',
+        'dragon': None
+    }
     if type_1 == 'normal' and type_2 is not None:
         type_1 = type_2
-    if type_1 == 'normal':
-        return 'fighting'
-    elif type_1 == 'fighting':
-        return 'psychic'
-    elif type_1 == 'flying':
-        return 'electric'
-    elif type_1 in ('grass', 'bug'):
-        return 'fire'
-    elif type_1 == 'water':
-        return 'grass'
-    elif type_1 == 'ice':
-        return 'steel'
-    elif type_1 == 'fire':
-        return 'water'
-    elif type_1 == 'fighting':
-        return 'psychic'
-    elif type_1 == 'rock':
-        return 'grass'
-    elif type_1 == 'ground':
-        return 'grass'
-    elif type_1 == 'psychic':
-        return 'dark'
-    elif type_1 == 'ghost':
-        return 'dark'
-    elif type_1 == 'fairy':
-        return 'dark'
-    elif type_1 == 'electric':
-        return 'fighting'
-    elif type_1 == 'dark':
-        return 'fighting'
-    elif type_1 == 'poison':
-        return 'fighting'
-    elif type_1 == 'steel':
-        return 'fire'
-    elif type_1 == 'dragon':
-        return None 
-    return None 
+    return type_weakness_map.get(type_1, None)
 
 
 def get_resistance(type_1, type_2=None):
+    resistance_map = {
+        'flying': 'fighting',
+        'ground': 'electric',
+        'psychic': 'fighting',
+        'ghost': 'fighting',
+        'electric': 'steel',
+        'dark': 'psychic',
+        'steel': 'grass'
+    }
     if type_1 == 'normal' and type_2 is not None:
         type_1 = type_2
-    if type_1 == 'normal':
-        return None
-    elif type_1 == 'flying':
-        return 'fighting'
-    elif type_1 in ('grass', 'bug'):
-        return None 
-    elif type_1 == 'water':
-        return None 
-    elif type_1 == 'ice':
-        return None 
-    elif type_1 == 'fire':
-        return None 
-    elif type_1 == 'fighting':
-        return None 
-    elif type_1 == 'rock':
-        return None 
-    elif type_1 == 'ground':
-        return 'electric'
-    elif type_1 == 'psychic':
-        return 'fighting'
-    elif type_1 == 'ghost':
-        return 'fighting'
-    elif type_1 == 'electric':
-        return 'steel'
-    elif type_1 == 'dark':
-        return 'psychic'
-    elif type_1 == 'fairy':
-        return None 
-    elif type_1 == 'poison':
-        return None 
-    elif type_1 == 'steel':
-        return 'grass'
-    elif type_1 == 'dragon':
-        return None 
+    return resistance_map.get(type_1, None)
 
 
 def get_card_type(type_1, type_2=None):
-    if type_1 == 'normal' and type_2 is not None:
-        type_1 = type_2
-    if type_1 == 'rock':
-        type_1 = 'fighting'
-    elif type_1 == 'ground':
-        type_1 = 'fighting'
-    elif type_1 == 'ice':
-        type_1 = 'water'
-    elif type_1 == 'bug':
-        type_1 = 'grass'
-    elif type_1 == 'poison':
-        type_1 = 'dark'
-    elif type_1 == 'flying':
-        type_1 = 'colorless'
-    elif type_1 == 'normal':
-        type_1 = 'colorless'
-    elif type_1 == 'fairy':
-        type_1 = 'psychic'
-    return type_1
+    type_map = {
+        'rock': 'fighting',
+        'ground': 'fighting',
+        'ice': 'water',
+        'bug': 'grass',
+        'poison': 'dark',
+        'flying': 'colorless',
+        'normal': 'colorless',
+        'ghost': 'psychic',
+        'fairy': 'psychic'
+    }
+    return type_map.get(type_1, type_1)
 
 
 def open_resize_paste(main_image, other_image_path, resize=OUTPUT_SIZE, keep_resize_ratio=False, location=(0,0), center=False):
@@ -273,27 +253,6 @@ def get_icon(name):
     icons = glob.glob(os.path.join(this_dir, 'resource', 'pokemon_art', '*' + name.lower() + '*' + '.png'))
     if icons:
         return icons[0]
-
-def get_card_type(type_1, type_2=None):
-    if type_1 == 'rock':
-        type_1 = 'fighting'
-    elif type_1 == 'ground':
-        type_1 = 'fighting'
-    elif type_1 == 'ice':
-        type_1 = 'water'
-    elif type_1 == 'bug':
-        type_1 = 'grass'
-    elif type_1 == 'poison':
-        type_1 = 'dark'
-    elif type_1 == 'flying':
-        type_1 = 'colorless'
-    elif type_1 == 'normal':
-        type_1 = 'colorless'
-    elif type_1 == 'ghost':
-        type_1 = 'psychic'
-    elif type_1 == 'fairy':
-        type_1 = 'psychic'
-    return type_1
 
 
 def get_text_color(type_1, type_2=None):
@@ -436,7 +395,7 @@ class Card(object):
         self.retreat = retreat
         self.artist = artist
         self.rarity = rarity
-        self.flavor_text = flavor_text
+        self.flavor_text = flavor_text or ""
 
         self.draw = None 
         self.new_image = None
@@ -580,56 +539,48 @@ class Card(object):
         MOVE_BASE_Y_OFFSET = 620 
         MOVE_TITLE_HEIGHT = 40  # The amount of space the titles take up
 
-        MOVE_START_GAP = (24, 12, 8)  # The gap from title to line 
-        TEXT_SPACING = (12, 10, 8)  # The gap between each line in the description 
-        SPLITTER_GAP = (30, 24, 10)  # The gap around the splitter 
-
-
         def get_block_sizes(text1, text2=None, is_ability=False, title2=False):
-            available_height = 245 
+            available_height = 256 
 
             # Calculate the initial space 
             len_text1 = len(text1) if text1 is not None else 0
             len_text2 = len(text2) if text2 is not None else 0
-            if not is_ability and (
-                (len_text1 <= 70 and len_text2 == 0) or (len_text1 <= 200 and not title2) or (len_text1 == 0 and len_text2 <= 70)
-            ):
-                initial_gap = 44 
-            else:
-                initial_gap = 0
+            initial_gap = 0 
+            if not self.ability:
+                # We can use the initial gap if the second move has 2 lines of text and the first move is empty, but the first move can only ever have 1 line of text 
+                if (len_text1 <= 40 and len_text2 == 0) or (len_text1 <= 200 and not title2) or (len_text1 == 0 and len_text2 <= 70):
+                    initial_gap = 44 
 
             # Start with the largest font and spacing and work down until it fits 
-            for (font, font_height), text_space, splitter_gap, start_gap in itertools.product(zip(FONT_MOVE_SIZES, FONT_MOVE_REAL_HEIGHT), TEXT_SPACING, SPLITTER_GAP, MOVE_START_GAP):
-                if splitter_gap == SPLITTER_GAP[-1] and text_space != TEXT_SPACING[-1]:
-                    continue  # Don't use the smallest splitter gap with the largest text space
+            for font, start_gap, text_space, splitter_gap,  in MOVE_COMBINATIONS:
+                font_height = FONT_MOVE_REAL_HEIGHT[FONT_MOVE_SIZES.index(font)]  # Get the index of the font size
+
                 logger.debug('font_height %s text_space %s splitter_gap %s start_gap %s ' % (font_height, text_space, splitter_gap, start_gap))
                 # Calculate the amount of space the text takes up
+                lines1, max_char_width1 = 0, 0
                 if text1 is not None:
                     lines1, max_char_width1 = get_lines_required(text1, font, max_width=596)
-                else:
-                    lines1, max_char_width1 = 0, 0
-                logger.debug('lines1 %s max_char_width1 %s' % (lines1, max_char_width1))
+                lines2, max_char_width2 = 0, 0
                 if text2 is not None:
                     lines2, max_char_width2 = get_lines_required(text2, font, max_width=596) 
-                else:
-                    lines2, max_char_width2 = 0, 0
-                logger.debug('lines2 %s max_char_width2 %s' % (lines2, max_char_width2))
 
-                text1_total = lines1 * text_space + lines1 * font_height + start_gap + MOVE_TITLE_HEIGHT 
-                logger.debug('text1_total %s' % text1_total)
+                text1_lines = font_height * lines1 + (lines1 - 1) * text_space 
+                text1_total = MOVE_TITLE_HEIGHT + start_gap + text1_lines + splitter_gap
                 if title2 or is_ability:
-                    text2_total = lines2 * text_space  + lines2 * font_height + start_gap + MOVE_TITLE_HEIGHT 
+                    text2_lines = font_height * lines2 + (lines2 - 1) * text_space
+                    text2_total = splitter_gap + MOVE_TITLE_HEIGHT + start_gap + text2_lines + (splitter_gap - 4)  # Add the splitter gap at the end to make the spacing even 
                 else:
                     assert lines2 == 0, lines2
-                    text2_total = 0  
-                logger.debug('text2_total %s' % text2_total)
+                    text2_total, text2_lines = 0, 0 
+                    
+                
+                logger.debug(f'  {MOVE_TITLE_HEIGHT} {start_gap} lines1 {text1_lines} {splitter_gap}  lines2 {text2_lines} ')
 
                 # Add the gap size to the total 
-                move_total = text1_total + text2_total + initial_gap + splitter_gap * 2
-                logger.debug('move_total %s' % move_total)
+                move_total = initial_gap + text1_total + text2_total 
+                logger.debug('move_total {initial_gap} + {text1_total} + {text2_total} %s <-- available_height %s' % (move_total, available_height))
 
                 if move_total <= available_height:
-                    logger.debug('move_total %s <= available_height %s' % (move_total, available_height))
                     break 
 
             # For a move, there is the first gap and line spacing
@@ -670,13 +621,15 @@ class Card(object):
             symbol = getattr(self, column + '_symbol')
             description = getattr(self, column + '_description')
 
-            if cost is None:
-                return  # Incomplete move 
-            for i, char in enumerate(cost.strip()):
-                paste_symbol(self.new_image, SYMBOLS[char], size=2, location=(67 + i * 42, MOVE_BASE_Y_OFFSET + MOVE_Y_OFFSET))
-            
             self.draw.text((257, MOVE_BASE_Y_OFFSET + MOVE_Y_OFFSET + 6), name.strip().title(), self.text_color, font=FONT_MOVE_TITLE)
-            
+
+            if cost is not None:
+                try:
+                    for i, char in enumerate(cost.strip()):
+                        paste_symbol(self.new_image, SYMBOLS[char], size=2, location=(67 + i * 42, MOVE_BASE_Y_OFFSET + MOVE_Y_OFFSET))
+                except Exception as e:
+                    pass 
+                        
             if damage:
                 try:
                     self.draw.text((602, MOVE_BASE_Y_OFFSET + MOVE_Y_OFFSET + 2), "{:>3}".format(damage), self.text_color, font=FONT_MOVE_DAMAGE, align='right')
@@ -795,6 +748,12 @@ class Card(object):
 
 
 def main():
+    # Open the CSV file and save as utf-8
+    # with open(os.path.join(this_dir, 'cards.csv'), 'r', encoding='utf-8', errors='replace') as f:
+    #     content = f.read()
+    # with open(os.path.join(this_dir, 'cards.csv'), 'w', encoding='utf-8') as f:
+    #     f.write(content)
+
     df = pandas.read_csv(os.path.join(this_dir, 'cards.csv'))
     df = df.where(pandas.notnull(df), None)
 
@@ -802,7 +761,7 @@ def main():
         os.makedirs(OUTPUT_DIR)
 
     for row_dict in df.to_dict(orient="records"):
-        # if row_dict['id'] != 142:
+        # if row_dict['id'] != 11:
         #     continue
         try:
             card = Card(**row_dict)
